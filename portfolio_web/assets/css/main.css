@@ -1,0 +1,14 @@
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0b1120;
+}
+
+.mono {
+    font-family: 'JetBrains Mono', monospace;
+}
