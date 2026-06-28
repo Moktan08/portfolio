@@ -6,6 +6,7 @@
         Seeking an opportunity to contribute innovative solutions while further developing my skills in a dynamic environment. References are available on request.
       </p>
       <p class="mono text-[10px] text-slate-600 tracking-wider">
+        Built with Vue · Laravel · Tailwind CSS <br>
         &copy; 2026 ROMI LAMA. ALL RIGHTS RESERVED.
       </p>
     </div>

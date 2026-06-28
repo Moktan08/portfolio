@@ -15,6 +15,8 @@ const props = defineProps({
 const activeProjectId = ref(null)
 const activeImageIndex = ref({})
 const descOpen = ref({})
+const zoomedProjectId = ref(null)
+const zoomedImageIndex = ref(0)
 
 watch(() => props.data, (newData) => {
   if (newData && newData.length > 0 && !activeProjectId.value) {
@@ -49,8 +51,54 @@ const toggleDesc = (projectId) => {
   descOpen.value[projectId] = !descOpen.value[projectId]
 }
 
+const openZoom = (projectId, imgIndex) => {
+  if (!descOpen.value[projectId]) {
+    zoomedProjectId.value = projectId
+    zoomedImageIndex.value = imgIndex
+  }
+}
+
+const closeZoom = () => {
+  zoomedProjectId.value = null
+  zoomedImageIndex.value = 0
+}
+
+const onLightboxKeydown = (e) => {
+  if (e.key === 'Escape') {
+    closeZoom()
+  }
+}
+
+const zoomedProject = computed(() => {
+  if (zoomedProjectId.value === null) return null
+  return props.data.find(p => p.id === zoomedProjectId.value) || null
+})
+
+const zoomedImages = computed(() => {
+  if (!zoomedProject.value) return []
+  return getImages(zoomedProject.value)
+})
+
+const zoomedImageUrl = computed(() => {
+  if (!zoomedProject.value) return ''
+  const images = zoomedImages.value
+  if (!images.length || !images[zoomedImageIndex.value]) return ''
+  return getImageUrl(images[zoomedImageIndex.value])
+})
+
+const shiftZoomedImage = (dir) => {
+  const total = zoomedImages.value.length
+  if (total <= 1) return
+  zoomedImageIndex.value = (zoomedImageIndex.value + dir + total) % total
+}
+
 const isDescOpen = (projectId) => {
   return !!descOpen.value[projectId]
+}
+
+const getDescriptionLines = (desc) => {
+  if (!desc) return []
+  return desc.split('\n').filter(line => line.trim())
 }
 
 const getImageUrl = (path) => {
@@ -177,7 +225,8 @@ const onTouchEnd = (projectId, e, total) => {
                   v-if="imgPath"
                   :src="getImageUrl(imgPath)"
                   :alt="project.title + ' screenshot ' + (imgIndex + 1)"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-cover cursor-zoom-in"
+                  @click="openZoom(project.id, imgIndex)"
                 />
                 <div
                   v-else
@@ -236,7 +285,12 @@ const onTouchEnd = (projectId, e, total) => {
             </div>
 
             <!-- Description trigger tab -->
-            <div class="absolute bottom-0 inset-x-0 z-30 flex justify-center pb-2.5">
+            <div
+              class="absolute inset-x-0 z-30 flex justify-center transition-all duration-300"
+              :class="isDescOpen(project.id)
+                ? 'top-0 pt-2.5'
+                : 'bottom-0 pb-2.5'"
+            >
               <button
                 @click="toggleDesc(project.id)"
                 class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-mono tracking-widest uppercase transition-all duration-200 border"
@@ -247,53 +301,61 @@ const onTouchEnd = (projectId, e, total) => {
                 <svg
                   width="10" height="10" viewBox="0 0 10 10" fill="none"
                   class="transition-transform duration-300"
-                  :class="isDescOpen(project.id) ? 'rotate-180' : ''"
+                  :class="isDescOpen(project.id) ? '' : 'rotate-180'"
                 >
                   <path d="M2 7L5 4L8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
-                Description
+                {{ isDescOpen(project.id) ? 'Image' : 'Description' }}
               </button>
             </div>
 
-            <!-- Slide-up description panel -->
+            <!-- Full-cover description panel -->
             <div
-              class="absolute inset-x-0 bottom-0 z-20 transition-all duration-350 ease-in-out"
+              class="absolute inset-0 z-20 transition-all duration-350 ease-in-out custom-scrollbar"
               :class="isDescOpen(project.id)
                 ? 'translate-y-0 opacity-100'
                 : 'translate-y-full opacity-0'"
-              style="backdrop-filter: blur(14px); background: rgba(8, 15, 30, 0.92); border-top: 1px solid rgba(56, 189, 248, 0.12); max-height: 70%; overflow-y: auto; padding-bottom: 52px;"
+              style="backdrop-filter: blur(14px); background: rgba(8, 15, 30, 0.92); border-top: 1px solid rgba(56, 189, 248, 0.12); height: 100%; overflow-y: auto; padding-bottom: 52px;"
             >
               <div class="p-5">
                 <!-- Label -->
-                <div class="flex items-center gap-1.5 mb-3">
-                  <span class="w-1 h-1 rounded-full bg-sky-400"></span>
+                <div class="mb-2">
                   <span class="text-[10px] font-mono tracking-wider text-slate-500 uppercase">Architecture Details</span>
                 </div>
 
                 <!-- Title -->
-                <h3 class="text-sm font-bold text-white tracking-tight mb-2">
+                <h3 class="text-base font-bold text-white tracking-tight mb-3">
                   {{ project.title }}
                 </h3>
 
-                <!-- Description -->
-                <p class="text-slate-400 text-xs leading-relaxed whitespace-pre-line font-normal tracking-wide mb-4">
-                  {{ project.description }}
-                </p>
+                <!-- Separator -->
+                <div class="border-t border-slate-800/40 mt-1 mb-3"></div>
 
-                <!-- Link -->
-                <div v-if="project.project_url" class="pt-3 border-t border-slate-800/40 flex justify-end">
-                  <a
-                    :href="project.project_url"
-                    target="_blank"
-                    class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-sky-400 hover:text-sky-300 transition-colors group/link"
+                <!-- Description -->
+                <div class="text-xs leading-relaxed font-normal tracking-wide space-y-2">
+                  <p
+                    v-for="(line, li) in getDescriptionLines(project.description)"
+                    :key="li"
+                    class="text-slate-300"
                   >
-                    Explore Codebase
-                    <span class="transform group-hover/link:translate-x-1 transition-transform font-bold">→</span>
-                  </a>
+                    {{ line }}
+                  </p>
                 </div>
               </div>
             </div>
 
+          </div>
+
+          <!-- Explore Codebase link (always visible below card) -->
+          <div v-if="project.project_url" class="flex justify-end mt-3">
+            <a
+              :href="project.project_url"
+              target="_blank"
+              class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-sky-400 hover:text-sky-300 transition-colors group/link"
+            >
+              Explore Codebase
+              <span class="transform group-hover/link:translate-x-1 transition-transform font-bold">→</span>
+            </a>
           </div>
         </div>
       </div>
@@ -307,6 +369,66 @@ const onTouchEnd = (projectId, e, total) => {
     >
       No projects indexed yet. Connect your dashboard to populate data entries.
     </div>
+    <!-- Lightbox modal -->
+    <Teleport to="body">
+      <div
+        v-if="zoomedProjectId !== null"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+        @click="closeZoom"
+        @keydown="onLightboxKeydown"
+        tabindex="0"
+      >
+        <!-- Close button -->
+        <button
+          @click.stop="closeZoom"
+          class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/80 border border-sky-900/30 text-sky-400 hover:bg-sky-950/50 hover:border-sky-500/40 transition-all duration-200"
+          aria-label="Close lightbox"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <!-- Left arrow -->
+        <button
+          v-if="zoomedImages.length > 1"
+          @click.stop="shiftZoomedImage(-1)"
+          class="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/80 border border-sky-900/30 text-sky-400 hover:bg-sky-950/50 hover:border-sky-500/40 transition-all duration-200"
+          aria-label="Previous image"
+        >
+          <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
+            <path d="M9 11L5 7L9 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <!-- Right arrow -->
+        <button
+          v-if="zoomedImages.length > 1"
+          @click.stop="shiftZoomedImage(1)"
+          class="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/80 border border-sky-900/30 text-sky-400 hover:bg-sky-950/50 hover:border-sky-500/40 transition-all duration-200"
+          aria-label="Next image"
+        >
+          <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
+            <path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <!-- Image counter -->
+        <div
+          v-if="zoomedImages.length > 1"
+          class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-slate-900/80 border border-sky-900/30 text-[10px] font-mono text-sky-400 tracking-wider"
+        >
+          {{ zoomedImageIndex + 1 }} / {{ zoomedImages.length }}
+        </div>
+
+        <img
+          :src="zoomedImageUrl"
+          alt="Zoomed project screenshot"
+          class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          @click.stop
+        />
+      </div>
+    </Teleport>
   </section>
 </template>
 

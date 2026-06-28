@@ -9,6 +9,7 @@
         <a href="#education" class="hover:text-white transition-colors">Education</a>
         <a href="#experience" class="hover:text-white transition-colors">Experience</a>
         <a href="#toolkit" class="hover:text-white transition-colors">Skills</a>
+        <a href="#projects" class="hover:text-white transition-colors">Projects</a>
         <a href="#contact" class="hover:text-white transition-colors">Contact</a>
       </nav>
     </div>
