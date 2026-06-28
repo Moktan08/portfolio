@@ -17,7 +17,14 @@ class ProjectsTable
             ->columns([
                 TextColumn::make('title')
                     ->searchable(),
-                ImageColumn::make('image_path'),
+                ImageColumn::make('images')
+                    ->label('Preview')
+                    ->disk('public')
+                    ->getStateUsing(fn ($record) => 
+                        is_array($record->images) && count($record->images) > 0
+                            ? [$record->images[0]]
+                            : []
+                    ),
                 TextColumn::make('project_url')
                     ->searchable(),
                 TextColumn::make('created_at')

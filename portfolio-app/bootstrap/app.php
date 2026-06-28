@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontReportWhen(function (Throwable $e): bool {
+            return $e instanceof \ErrorException &&
+                str_contains($e->getMessage(), "tempnam(): file created in the system's temporary directory");
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );

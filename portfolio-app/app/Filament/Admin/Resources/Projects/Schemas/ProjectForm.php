@@ -18,8 +18,14 @@ class ProjectForm
                 Textarea::make('description')
                     ->required()
                     ->columnSpanFull(),
-                FileUpload::make('image_path')
-                    ->image(),
+                FileUpload::make('images')
+                    ->label('Project Images')
+                    ->image()
+                    ->multiple()
+                    ->reorderable()
+                    ->disk('public')
+                    ->directory('projects')
+                    ->columnSpanFull(),
                 TextInput::make('project_url')
                     ->url(),
             ]);
